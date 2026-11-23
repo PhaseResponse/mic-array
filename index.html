@@ -63,9 +63,18 @@
 <script>
   const c = 343.0, cvs = document.getElementById('polar'), ctx = cvs.getContext('2d');
   let mode = 2;
+  const micIds = ['fNum', 'dNum', 'g0Num', 't0Num', 'g1Num', 't1Num', 'g2Num', 't2Num'];
+  const saved = {2: {}, 3: {}};
+  const defaults = {fNum: '1000', dNum: '5'};
 
   function setMode(m) {
+    micIds.forEach(id => { saved[mode][id] = document.getElementById(id).value; });
     mode = m;
+    micIds.forEach(id => {
+      const v = saved[m][id] ?? (defaults[id] ?? '0');
+      document.getElementById(id).value = v;
+      document.getElementById(id.replace('Num', 'Sld')).value = v;
+    });
     document.getElementById('btn2').classList.toggle('active', m === 2);
     document.getElementById('btn3').classList.toggle('active', m === 3);
     document.getElementById('card2').style.display = m === 3 ? 'flex' : 'none';
@@ -140,9 +149,9 @@
         re = g0 * Math.cos(p0) + g1 * Math.cos(p1);
         im = g0 * Math.sin(p0) + g1 * Math.sin(p1);
       } else {
-        const p0 = omega * (-(x0 * ux + y0 * uy) / c - t0);
-        const p1 = omega * (-(x1 * ux + y1 * uy) / c - t1);
-        const p2 = omega * (-(x2 * ux + y2 * uy) / c - t2);
+        const p0 = omega * ((x0 * ux + y0 * uy) / c - t0);
+        const p1 = omega * ((x1 * ux + y1 * uy) / c - t1);
+        const p2 = omega * ((x2 * ux + y2 * uy) / c - t2);
         re = g0 * Math.cos(p0) + g1 * Math.cos(p1) + g2 * Math.cos(p2);
         im = g0 * Math.sin(p0) + g1 * Math.sin(p1) + g2 * Math.sin(p2);
       }
