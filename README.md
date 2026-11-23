@@ -2,7 +2,7 @@
 
 Interactive 2-microphone linear and 3-microphone equilateral triangle polar response simulator.
 
-**[Open Live Simulator](https://github.io)**
+**[Open Live Simulator](https://phaseresponse.github.io/mic-array/)**
 
 ## Parameters
 * **Array Geometry:** Toggle between 2 mics (`-d/2`, `+d/2`) and 3 mics (`0°`, `120°`, `240°`)
