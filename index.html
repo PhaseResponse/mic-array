@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2-Mic &amp; 3-Mic Beamforming Polar Plot</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #1e293b; margin: 0; padding: 10px; display: flex; justify-content: center; }
+    .container { display: flex; flex-wrap: wrap; gap: 28px; max-width: 960px; width: 100%; background: #fff; padding: 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .controls { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 8px; }
+    .mode-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .mode-btn { padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+    .mode-btn.active { background: #536878; color: #fff; border-color: #536878; }
+    .top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .group { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; font-weight: 600; }
+    .row { display: flex; align-items: center; gap: 4px; }
+    .row input[type="range"] { flex: 1; min-width: 40px; cursor: pointer; accent-color: #536878; margin: 0; }
+    .row input[type="number"] { width: 44px; padding: 2px 3px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; font-weight: 600; text-align: right; }
+    #fNum { width: 62px; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .card h3 { margin: 0; font-size: 0.85rem; color: #536878; }
+    .mic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .plot-box { flex: 1.4; min-width: 280px; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+    canvas { width: 100%; max-width: 440px; height: auto; aspect-ratio: 1 / 1; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="controls">
+    <div class="mode-bar">
+      <button id="btn2" class="mode-btn active" onclick="setMode(2)">2 Mics</button>
+      <button id="btn3" class="mode-btn" onclick="setMode(3)">3 Mics (Triangle)</button>
+    </div>
+    <div class="top-grid">
+      <div class="group"><label for="fNum">Frequency (Hz)</label><div class="row"><input type="range" id="fSld" min="8" max="8000" step="10" value="1000"><input type="number" id="fNum" min="8" max="20000" step="10" value="1000"></div></div>
+      <div class="group"><label for="dNum">Mic Distance (cm)</label><div class="row"><input type="range" id="dSld" min="1" max="50" step="0.5" value="5"><input type="number" id="dNum" min="0.1" max="200" step="0.5" value="5"></div></div>
+    </div>
+    <div class="card">
+      <h3 id="lbl0">mic0 (-d/2)</h3>
+      <div class="mic-grid">
+        <div class="group"><span>Gain (dB)</span><div class="row"><input type="range" id="g0Sld" min="-20" max="20" step="0.5" value="0"><input type="number" id="g0Num" min="-40" max="40" step="0.5" value="0"></div></div>
+        <div class="group"><span>Delay (&mu;s)</span><div class="row"><input type="range" id="t0Sld" min="-500" max="500" step="5" value="0"><input type="number" id="t0Num" min="-2000" max="2000" step="5" value="0"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 id="lbl1">mic1 (+d/2)</h3>
+      <div class="mic-grid">
+        <div class="group"><span>Gain (dB)</span><div class="row"><input type="range" id="g1Sld" min="-20" max="20" step="0.5" value="0"><input type="number" id="g1Num" min="-40" max="40" step="0.5" value="0"></div></div>
+        <div class="group"><span>Delay (&mu;s)</span><div class="row"><input type="range" id="t1Sld" min="-500" max="500" step="5" value="0"><input type="number" id="t1Num" min="-2000" max="2000" step="5" value="0"></div></div>
+      </div>
+    </div>
+    <div class="card" id="card2" style="display:none;">
+      <h3>mic2 (240&deg;)</h3>
+      <div class="mic-grid">
+        <div class="group"><span>Gain (dB)</span><div class="row"><input type="range" id="g2Sld" min="-20" max="20" step="0.5" value="0"><input type="number" id="g2Num" min="-40" max="40" step="0.5" value="0"></div></div>
+        <div class="group"><span>Delay (&mu;s)</span><div class="row"><input type="range" id="t2Sld" min="-500" max="500" step="5" value="0"><input type="number" id="t2Num" min="-2000" max="2000" step="5" value="0"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="plot-box"><canvas id="polar" width="560" height="560"></canvas></div>
+</div>
+<script>
+  const c = 343.0, cvs = document.getElementById('polar'), ctx = cvs.getContext('2d');
+  let mode = 2;
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById('btn2').classList.toggle('active', m === 2);
+    document.getElementById('btn3').classList.toggle('active', m === 3);
+    document.getElementById('card2').style.display = m === 3 ? 'flex' : 'none';
+    document.getElementById('lbl0').textContent = m === 2 ? 'mic0 (-d/2)' : 'mic0 (0°)';
+    document.getElementById('lbl1').textContent = m === 2 ? 'mic1 (+d/2)' : 'mic1 (120°)';
+    draw();
+  }
+
+  function link(sId, nId) {
+    const s = document.getElementById(sId), n = document.getElementById(nId);
+    s.addEventListener('input', () => { n.value = s.value; draw(); });
+    n.addEventListener('input', () => { if (n.value !== '') { s.value = n.value; draw(); } });
+  }
+  link('fSld', 'fNum'); link('dSld', 'dNum');
+  link('g0Sld', 'g0Num'); link('t0Sld', 't0Num');
+  link('g1Sld', 'g1Num'); link('t1Sld', 't1Num');
+  link('g2Sld', 'g2Num'); link('t2Sld', 't2Num');
+
+  function draw() {
+    const f = parseFloat(document.getElementById('fNum').value) || 1000;
+    const d = (parseFloat(document.getElementById('dNum').value) || 5) / 100;
+    const g0 = Math.pow(10, (parseFloat(document.getElementById('g0Num').value) || 0) / 20);
+    const t0 = (parseFloat(document.getElementById('t0Num').value) || 0) * 1e-6;
+    const g1 = Math.pow(10, (parseFloat(document.getElementById('g1Num').value) || 0) / 20);
+    const t1 = (parseFloat(document.getElementById('t1Num').value) || 0) * 1e-6;
+    const g2 = Math.pow(10, (parseFloat(document.getElementById('g2Num').value) || 0) / 20);
+    const t2 = (parseFloat(document.getElementById('t2Num').value) || 0) * 1e-6;
+
+    const w = cvs.width, cx = w / 2, cy = w / 2, maxR = w * 0.38, minDb = -40, maxDb = 20, omega = 2 * Math.PI * f;
+    const toR = db => ((Math.max(minDb, Math.min(maxDb, db)) - minDb) / (maxDb - minDb)) * maxR;
+
+    ctx.clearRect(0, 0, w, w);
+    ctx.strokeStyle = '#cbd5e1'; ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif'; ctx.lineWidth = 1;
+    for (let db = -30; db <= maxDb; db += 10) {
+      const r = toR(db);
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI); ctx.stroke();
+      ctx.fillText(db + ' dB', cx + r * 0.707 + 4, cy - r * 0.707 - 4);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    for (let deg = 0; deg < 360; deg += 30) {
+      const a = -deg * Math.PI / 180;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a)); ctx.stroke();
+      ctx.fillStyle = '#1e293b'; ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(deg + '°', cx + (maxR + 22) * Math.cos(a), cy + (maxR + 22) * Math.sin(a));
+    }
+
+    ctx.strokeStyle = '#000000'; ctx.lineWidth = 2; ctx.fillStyle = '#000000'; ctx.font = 'bold 11px sans-serif';
+    if (mode === 2) {
+      ctx.beginPath(); ctx.arc(cx - 12, cy, 4.5, 0, 2 * Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + 12, cy, 4.5, 0, 2 * Math.PI); ctx.stroke();
+      ctx.fillText('mic0', cx - 16, cy + 16); ctx.fillText('mic1', cx + 16, cy + 16);
+    } else {
+      const visR = 16;
+      const mx0 = cx + visR, my0 = cy;
+      ctx.beginPath(); ctx.arc(mx0, my0, 4.5, 0, 2 * Math.PI); ctx.stroke(); ctx.fillText('mic0', mx0 + 18, my0);
+      const a1 = -120 * Math.PI / 180, mx1 = cx + visR * Math.cos(a1), my1 = cy + visR * Math.sin(a1);
+      ctx.beginPath(); ctx.arc(mx1, my1, 4.5, 0, 2 * Math.PI); ctx.stroke(); ctx.fillText('mic1', mx1 - 18, my1 - 12);
+      const a2 = -240 * Math.PI / 180, mx2 = cx + visR * Math.cos(a2), my2 = cy + visR * Math.sin(a2);
+      ctx.beginPath(); ctx.arc(mx2, my2, 4.5, 0, 2 * Math.PI); ctx.stroke(); ctx.fillText('mic2', mx2 - 18, my2 + 12);
+    }
+
+    const R = d / Math.sqrt(3);
+    const x0 = R, y0 = 0, x1 = -R / 2, y1 = d / 2, x2 = -R / 2, y2 = -d / 2;
+
+    ctx.beginPath();
+    for (let deg = 0; deg <= 360; deg++) {
+      const rad = deg * Math.PI / 180, ux = Math.cos(rad), uy = Math.sin(rad);
+      let re = 0, im = 0;
+      if (mode === 2) {
+        const p0 = omega * (-(d / 2) * ux / c - t0);
+        const p1 = omega * ((d / 2) * ux / c - t1);
+        re = g0 * Math.cos(p0) + g1 * Math.cos(p1);
+        im = g0 * Math.sin(p0) + g1 * Math.sin(p1);
+      } else {
+        const p0 = omega * (-(x0 * ux + y0 * uy) / c - t0);
+        const p1 = omega * (-(x1 * ux + y1 * uy) / c - t1);
+        const p2 = omega * (-(x2 * ux + y2 * uy) / c - t2);
+        re = g0 * Math.cos(p0) + g1 * Math.cos(p1) + g2 * Math.cos(p2);
+        im = g0 * Math.sin(p0) + g1 * Math.sin(p1) + g2 * Math.sin(p2);
+      }
+      const db = 20 * Math.log10(Math.max(Math.hypot(re, im) / mode, 1e-4));
+      const r = toR(db), a = -rad;
+      deg === 0 ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)) : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(83, 104, 120, 0.25)'; ctx.fill();
+    ctx.strokeStyle = '#536878'; ctx.lineWidth = 2.5; ctx.stroke();
+  }
+  draw();
+</script>
+</body>
+</html>
+
