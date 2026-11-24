@@ -7,8 +7,15 @@
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #1e293b; margin: 0; padding: 10px; display: flex; justify-content: center; }
-    .container { display: flex; flex-wrap: wrap; gap: 28px; max-width: 960px; width: 100%; background: #fff; padding: 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-    .controls { flex: 1; min-width: min(280px, 100%); display: flex; flex-direction: column; gap: 8px; }
+    .container { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); grid-template-areas: "top plot" "mics plot"; grid-template-rows: auto 1fr; column-gap: 28px; row-gap: 8px; max-width: 960px; width: 100%; background: #fff; padding: 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); align-items: start; }
+    .top { grid-area: top; display: flex; flex-direction: column; gap: 8px; }
+    .mics { grid-area: mics; display: flex; flex-direction: column; gap: 8px; }
+    .ref-line { padding: 0 2px; }
+    @media (max-width: 700px) {
+      .container { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "plot" "mics"; grid-template-rows: auto; }
+      .plot-box { position: sticky; top: 0; z-index: 2; background: #fff; }
+      .plot-box canvas { max-width: min(300px, 100%); }
+    }
     .mode-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .mode-btn { padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
     .mode-btn.active { background: #536878; color: #fff; border-color: #536878; }
@@ -20,6 +27,7 @@
     .readout { font-size: 0.78rem; color: #475569; font-weight: 500; }
     .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
     .card h3 { margin: 0; font-size: 0.85rem; color: #536878; }
+    .ref b { color: #536878; }
     .ref { font-size: 0.78rem; color: #475569; }
     .mic-body { display: grid; grid-template-columns: auto auto minmax(0, 1fr); column-gap: 10px; row-gap: 2px; }
     .gain-col { grid-row: span 2; }
@@ -38,13 +46,13 @@
     .look-lbl { color: #536878; font-size: 0.85rem; text-align: center; }
     .mirror-lbl { font-size: 0.75rem; font-weight: 500; }
     #look2 { display: none; }
-    .plot-box { flex: 1.4; min-width: min(280px, 100%); display: flex; align-items: center; justify-content: center; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+    .plot-box { grid-area: plot; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
     canvas { width: 100%; max-width: 440px; height: auto; aspect-ratio: 1 / 1; }
   </style>
 </head>
 <body>
 <div class="container">
-  <div class="controls">
+  <div class="top">
     <div class="mode-bar">
       <button id="btn2" class="mode-btn active" onclick="setMode(2)">2 Mics</button>
       <button id="btn3" class="mode-btn" onclick="setMode(3)">3 Mics (Triangle)</button>
@@ -53,10 +61,9 @@
       <div class="group"><label for="dlNum">d/&lambda; (mic distance in wavelengths)</label><div class="row"><input type="range" id="dlSld" min="0.01" max="2" step="0.01" value="0.4"><input type="number" id="dlNum" min="0.01" max="5" step="0.01" value="0.4"></div><span class="readout" id="fOut"></span></div>
       <div class="group"><label for="dNum">d (mic distance in cm)</label><div class="row"><input type="range" id="dSld" min="1" max="100" step="0.5" value="5"><input type="number" id="dNum" min="0.1" max="200" step="0.5" value="5"></div><span class="readout" id="dcOut"></span></div>
     </div>
-    <div class="card">
-      <h3 id="lbl0">mic0 (-d/2), reference</h3>
-      <div class="ref">Fixed: 0 dB, 0 &mu;s, + polarity</div>
-    </div>
+  </div>
+  <div class="plot-box"><canvas id="polar" width="560" height="560"></canvas></div>
+  <div class="mics">
     <div class="card">
       <h3 id="lbl1">mic1 (+d/2)</h3>
       <div class="mic-body">
@@ -85,8 +92,8 @@
         <span class="readout tau-line" id="t2Out"></span>
       </div>
     </div>
+    <div class="ref ref-line"><b id="lbl0">mic0 (-d/2)</b>: reference, fixed at 0 dB, 0 &mu;s, + polarity</div>
   </div>
-  <div class="plot-box"><canvas id="polar" width="560" height="560"></canvas></div>
 </div>
 <script>
   const c = 343.0, cvs = document.getElementById('polar'), ctx = cvs.getContext('2d');
@@ -118,7 +125,7 @@
     document.getElementById('btn3').classList.toggle('active', m === 3);
     document.getElementById('card2').style.display = m === 3 ? 'flex' : 'none';
     document.getElementById('look1').style.display = m === 2 ? 'block' : 'none';
-    document.getElementById('lbl0').textContent = m === 2 ? 'mic0 (-d/2), reference' : 'mic0 (0°), reference';
+    document.getElementById('lbl0').textContent = m === 2 ? 'mic0 (-d/2)' : 'mic0 (0°)';
     document.getElementById('lbl1').textContent = m === 2 ? 'mic1 (+d/2)' : 'mic1 (120°)';
     draw();
   }
