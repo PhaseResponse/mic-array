@@ -7,12 +7,13 @@
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #1e293b; margin: 0; padding: 10px; display: flex; justify-content: center; }
-    .container { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); grid-template-areas: "top plot" "mics plot"; grid-template-rows: auto 1fr; column-gap: 28px; row-gap: 8px; max-width: 960px; width: 100%; background: #fff; padding: 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); align-items: start; }
+    .container { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); grid-template-areas: "top plot" "mics plot" "foot foot"; grid-template-rows: auto 1fr auto; column-gap: 28px; row-gap: 8px; max-width: 960px; width: 100%; background: #fff; padding: 14px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); align-items: start; }
     .top { grid-area: top; display: flex; flex-direction: column; gap: 8px; }
     .mics { grid-area: mics; display: flex; flex-direction: column; gap: 8px; }
     .ref-line { padding: 0 2px; }
+    .footer { grid-area: foot; text-align: center; font-size: 0.75rem; color: #64748b; padding-top: 6px; }
     @media (max-width: 700px) {
-      .container { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "plot" "mics"; grid-template-rows: auto; }
+      .container { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "plot" "mics" "foot"; grid-template-rows: auto; }
       .plot-box { position: sticky; top: 0; z-index: 2; background: #fff; }
       .plot-box canvas { max-width: min(300px, 100%); }
     }
@@ -94,6 +95,7 @@
     </div>
     <div class="ref ref-line"><b id="lbl0">mic0 (-d/2)</b>: reference, fixed at 0 dB, 0 &mu;s, + polarity</div>
   </div>
+  <footer class="footer">&copy; 2026 Sharon Urieli &middot; MIT License</footer>
 </div>
 <script>
   const c = 343.0, cvs = document.getElementById('polar'), ctx = cvs.getContext('2d');
