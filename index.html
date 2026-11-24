@@ -102,11 +102,11 @@
   let mode = 2;
   const pol = {1: 1, 2: 1};
   const stateIds = ['dlNum', 'dNum', 'g1Num', 'a1Num', 'g2Num', 'a2Num'];
-  // defaults: cardioid pointing at 0° with a null at 180°, in both modes
-  //   2 mics: mic1 polarity −, θ = 180° (delay −d/c)
+  // defaults: both modes point at 0° with a null at 180°
+  //   2 mics: mic1 polarity +, look direction θ = 0° (delay +d/c); at d/λ = 0.25 this also nulls 180°
   //   3 mics: mic1 & mic2 at −6 dB (½ each), polarity −, θ = 30° (delay +0.866 d/c)
   const defaults = {
-    2: {dlNum: '0.25', dNum: '5', g1Num: '0', a1Num: '180', g2Num: '0', a2Num: '90', pol: {1: -1, 2: 1}},
+    2: {dlNum: '0.25', dNum: '5', g1Num: '0', a1Num: '0', g2Num: '0', a2Num: '90', pol: {1: 1, 2: 1}},
     3: {dlNum: '0.25', dNum: '5', g1Num: '-6', a1Num: '30', g2Num: '-6', a2Num: '30', pol: {1: -1, 2: -1}},
   };
   const saved = {2: {}, 3: {}};
@@ -149,6 +149,8 @@
   // ---------- polarity ----------
   function togglePol(i) { pol[i] = -pol[i]; updatePolBtn(i); draw(); }
   function updatePolBtn(i) {
+    if (i === 1) document.getElementById('look1').innerHTML =
+      (pol[1] > 0 ? 'Look direction &theta;' : 'Null direction &theta;') + '<br><span class="mirror-lbl">(mirrored)</span>';
     const b = document.getElementById('pol' + i);
     b.textContent = pol[i] > 0 ? '+' : '−';
     b.classList.toggle('neg', pol[i] < 0);
