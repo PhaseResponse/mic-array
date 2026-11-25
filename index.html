@@ -16,8 +16,13 @@
       .container { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "plot" "mics" "foot"; grid-template-rows: auto; }
       .plot-box { position: sticky; top: 0; z-index: 2; background: #fff; }
       .plot-box canvas { max-width: min(300px, 100%); }
+      .plot-box.two { flex-direction: row; }
+      .plot-box.two .plot-wrap { width: 50%; }
+      .wtab { font-size: 0.72rem; }
+      .wtab th, .wtab td { padding: 2px 3px; }
+      .wtab td:first-child { white-space: normal; }
     }
-    .mode-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .mode-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
     .mode-btn { padding: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
     .mode-btn.active { background: #536878; color: #fff; border-color: #536878; }
     .top-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
@@ -47,7 +52,22 @@
     .look-lbl { color: #536878; font-size: 0.85rem; text-align: center; }
     .mirror-lbl { font-size: 0.75rem; font-weight: 500; }
     #look2 { display: none; }
-    .plot-box { grid-area: plot; display: flex; align-items: center; justify-content: center; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+    .plot-box { grid-area: plot; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #fafafa; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+    .plot-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; }
+    .plot-cap { font-size: 0.8rem; font-weight: 600; color: #536878; text-align: center; }
+    .look-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .look-col { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.8rem; font-weight: 600; }
+    .look-col input { width: 52px; padding: 2px 3px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.8rem; font-weight: 600; text-align: right; }
+    .knob-c { width: 100%; max-width: 170px; height: auto; touch-action: none; cursor: pointer; }
+    .knob-c:focus { outline: 2px solid #536878; outline-offset: 2px; border-radius: 6px; }
+    .wtab { width: auto; border-collapse: collapse; font-size: 0.78rem; white-space: nowrap; }
+    .wtab caption { caption-side: top; text-align: left; white-space: normal; font-size: 0.8rem; font-weight: 600; color: #536878; padding-bottom: 3px; }
+    .wtab th, .wtab td { padding: 2px 7px; text-align: right; border-bottom: 1px solid #e2e8f0; }
+    .wtab th { color: #536878; font-weight: 600; }
+    .xyz { color: #64748b; font-size: 0.72rem; }
+    .method-bar { grid-template-columns: 1fr 1fr; }
+    .tbox { align-self: center; max-width: 100%; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; }
+    .wtab td:first-child, .wtab th:first-child { text-align: left; }
     canvas { width: 100%; max-width: 440px; height: auto; aspect-ratio: 1 / 1; }
   </style>
 </head>
@@ -57,15 +77,27 @@
     <div class="mode-bar">
       <button id="btn2" class="mode-btn active" onclick="setMode(2)">2 Mics</button>
       <button id="btn3" class="mode-btn" onclick="setMode(3)">3 Mics (Triangle)</button>
+      <button id="btn4" class="mode-btn" onclick="setMode(4)">4 Mics (Tetra)</button>
     </div>
     <div class="top-grid">
       <div class="group"><label for="dlNum">d/&lambda; (mic distance in wavelengths)</label><div class="row"><input type="range" id="dlSld" min="0.01" max="2" step="0.01" value="0.4"><input type="number" id="dlNum" min="0.01" max="5" step="0.01" value="0.4"></div><span class="readout" id="fOut"></span></div>
       <div class="group"><label for="dNum">d (mic distance in cm)</label><div class="row"><input type="range" id="dSld" min="1" max="100" step="0.5" value="5"><input type="number" id="dNum" min="0.1" max="200" step="0.5" value="5"></div><span class="readout" id="dcOut"></span></div>
     </div>
   </div>
-  <div class="plot-box"><canvas id="polar" width="560" height="560"></canvas></div>
+  <div class="plot-box" id="plotBox">
+    <div class="plot-wrap"><div class="plot-cap" id="capAz"></div><canvas id="polar" width="560" height="560"></canvas></div>
+    <div class="plot-wrap" id="wrapEl" style="display:none;"><div class="plot-cap" id="capEl"></div><canvas id="polarEl" width="560" height="560"></canvas></div>
+  </div>
   <div class="mics">
-    <div class="card">
+    <div class="card" id="card4" style="display:none;">
+      <div class="look-grid">
+        <div class="look-col"><span>Azimuth</span><svg class="knob-c" id="kAz" viewBox="0 0 160 140" tabindex="0" aria-label="look azimuth dial"></svg><span><input type="number" id="azNum" min="0" max="359" step="1" value="0">&deg;</span></div>
+        <div class="look-col"><span>Elevation</span><svg class="knob-c" id="kEl" viewBox="0 0 160 140" tabindex="0" aria-label="look elevation dial"></svg><span><input type="number" id="elNum" min="0" max="90" step="1" value="20">&deg;</span></div>
+      </div>
+      <div class="mode-bar method-bar"><button id="mBest" class="mode-btn active" onclick="setMethod('best')">MVDR</button><button id="mDas" class="mode-btn" onclick="setMethod('das')">Delay and Sum</button></div>
+      <div class="tbox"><table class="wtab"><caption>Values computed from the angles set in the Azimuth and Elevation dials</caption><thead><tr><th>Mic (x, y, z)</th><th>Gain</th><th>Polarity</th><th>&theta;</th><th>&tau; (&mu;s)</th></tr></thead><tbody id="wBody"></tbody></table><div class="readout" id="snrOut" style="margin-top:8px"></div></div>
+    </div>
+    <div class="card" id="card1">
       <h3 id="lbl1">mic1 (+d/2)</h3>
       <div class="mic-body">
         <div class="gain-col"><span>Gain (dB)</span><input type="range" class="vslider" id="g1Sld" min="-20" max="20" step="0.5" value="0" aria-label="mic1 gain"><input type="number" id="g1Num" min="-40" max="40" step="0.5" value="0"></div>
@@ -93,7 +125,7 @@
         <span class="readout tau-line" id="t2Out"></span>
       </div>
     </div>
-    <div class="ref ref-line"><b id="lbl0">mic0 (-d/2)</b>: reference, fixed at 0 dB, 0 &mu;s, + polarity</div>
+    <div class="ref ref-line" id="refLine"><b id="lbl0">mic0 (-d/2)</b>: reference, fixed at 0 dB, 0 &mu;s, + polarity</div>
   </div>
   <footer class="footer">&copy; 2026 Sharon Urieli &middot; MIT License</footer>
 </div>
@@ -101,15 +133,17 @@
   const c = 343.0, cvs = document.getElementById('polar'), ctx = cvs.getContext('2d');
   let mode = 2;
   const pol = {1: 1, 2: 1};
-  const stateIds = ['dlNum', 'dNum', 'g1Num', 'a1Num', 'g2Num', 'a2Num'];
+  const stateIds = ['dlNum', 'dNum', 'g1Num', 'a1Num', 'g2Num', 'a2Num', 'azNum', 'elNum'];
   // defaults: both modes point at 0° with a null at 180°
   //   2 mics: mic1 polarity +, look direction θ = 0° (delay +d/c); at d/λ = 0.25 this also nulls 180°
   //   3 mics: mic1 & mic2 at −6 dB (½ each), polarity −, θ = 30° (delay +0.866 d/c)
   const defaults = {
-    2: {dlNum: '0.25', dNum: '5', g1Num: '0', a1Num: '0', g2Num: '0', a2Num: '90', pol: {1: 1, 2: 1}},
-    3: {dlNum: '0.25', dNum: '5', g1Num: '-6', a1Num: '30', g2Num: '-6', a2Num: '30', pol: {1: -1, 2: -1}},
+    2: {dlNum: '0.25', dNum: '5', g1Num: '0', a1Num: '0', g2Num: '0', a2Num: '90', azNum: '0', elNum: '20', pol: {1: 1, 2: 1}},
+    3: {dlNum: '0.25', dNum: '5', g1Num: '-6', a1Num: '30', g2Num: '-6', a2Num: '30', azNum: '0', elNum: '20', pol: {1: -1, 2: -1}},
+    //   4 mics: delay-and-sum toward azimuth 30°, elevation 20°
+    4: {dlNum: '0.4', dNum: '5', g1Num: '0', a1Num: '90', g2Num: '0', a2Num: '90', azNum: '30', elNum: '20', pol: {1: 1, 2: 1}},
   };
-  const saved = {2: {}, 3: {}};
+  const saved = {2: {}, 3: {}, 4: {}};
   const num = id => parseFloat(document.getElementById(id).value);
 
   // ---------- mode switching (each mode keeps its own settings) ----------
@@ -130,7 +164,14 @@
     [1, 2].forEach(i => { updatePolBtn(i); drawKnob(i); });
     document.getElementById('btn2').classList.toggle('active', m === 2);
     document.getElementById('btn3').classList.toggle('active', m === 3);
+    document.getElementById('btn4').classList.toggle('active', m === 4);
+    document.getElementById('card1').style.display = m === 4 ? 'none' : 'flex';
     document.getElementById('card2').style.display = m === 3 ? 'flex' : 'none';
+    document.getElementById('card4').style.display = m === 4 ? 'flex' : 'none';
+    document.getElementById('refLine').style.display = m === 4 ? 'none' : 'block';
+    document.getElementById('wrapEl').style.display = m === 4 ? 'flex' : 'none';
+    document.getElementById('plotBox').classList.toggle('two', m === 4);
+    ['Az', 'El'].forEach(drawLookKnob);
     document.getElementById('look1').style.display = m === 2 ? 'block' : 'none';
     document.getElementById('lbl0').textContent = m === 2 ? 'mic0 (-d/2)' : 'mic0 (0°)';
     document.getElementById('lbl1').textContent = m === 2 ? 'mic1 (+d/2)' : 'mic1 (120°)';
@@ -210,6 +251,187 @@
   }
   buildKnob(1); buildKnob(2);
 
+  // ---------- 4-mic look-direction knobs ----------
+  // Azimuth: full circle, 0° at right, counter-clockwise (same as the plot).
+  // Elevation: right half-circle, −90° (down) … 0° (horizon) … +90° (up).
+  const LY = 70, LR = 46;
+  const lookCfg = {Az: {id: 'azNum', min: 0, max: 359, full: true, cx: 80}, El: {id: 'elNum', min: 0, max: 90, full: false, cx: 45}};
+  function buildLookKnob(key) {
+    const cfg = lookCfg[key], svg = document.getElementById('k' + key), NS = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+    if (cfg.full) el('circle', {cx: cfg.cx, cy: LY, r: LR, fill: 'none', stroke: '#cbd5e1', 'stroke-width': 8});
+    else el('path', {d: `M ${cfg.cx + LR} ${LY} A ${LR} ${LR} 0 0 0 ${cfg.cx} ${LY - LR}`, fill: 'none', stroke: '#cbd5e1', 'stroke-width': 8, 'stroke-linecap': 'round'});
+    const label = (x, y, t) => { const e = el('text', {x, y, 'font-size': 12, fill: '#475569', 'text-anchor': 'middle', 'dominant-baseline': 'middle', 'font-family': 'system-ui, sans-serif'}); e.textContent = t; };
+    const ticks = cfg.full ? [[0, '0°'], [90, '90°'], [180, '180°'], [270, '270°']] : [[90, '90°'], [45, '45°'], [0, '0°']];
+    ticks.forEach(([a, t]) => {
+      const r = a * Math.PI / 180, lr = LR + 15;
+      el('line', {x1: cfg.cx + (LR - 10) * Math.cos(r), y1: LY - (LR - 10) * Math.sin(r), x2: cfg.cx + (LR - 4) * Math.cos(r), y2: LY - (LR - 4) * Math.sin(r), stroke: '#94a3b8', 'stroke-width': 1.5});
+      label(cfg.cx + lr * Math.cos(r) + (cfg.full ? 0 : 8), LY - lr * Math.sin(r), t);
+    });
+    el('line', {id: 'kn' + key, x1: cfg.cx, y1: LY, x2: cfg.cx, y2: LY, stroke: '#536878', 'stroke-width': 3, 'stroke-linecap': 'round'});
+    el('circle', {cx: cfg.cx, cy: LY, r: 4, fill: '#536878'});
+    el('circle', {id: 'kh' + key, cx: cfg.cx, cy: LY, r: 7, fill: '#536878'});
+    let dragging = false;
+    const setFromPointer = e => {
+      const r = svg.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width * 160, y = (e.clientY - r.top) / r.height * 140;
+      let a = Math.atan2(LY - y, x - cfg.cx) * 180 / Math.PI;
+      if (cfg.full) a = (a + 360) % 360;
+      else a = Math.max(0, Math.min(90, a < -90 ? 90 : a));
+      setLook(key, Math.round(a));
+    };
+    svg.addEventListener('pointerdown', e => { dragging = true; svg.setPointerCapture(e.pointerId); setFromPointer(e); });
+    svg.addEventListener('pointermove', e => { if (dragging) setFromPointer(e); });
+    svg.addEventListener('pointerup', () => { dragging = false; });
+    svg.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 10 : 1, cur = num(cfg.id);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { setLook(key, cur + step); e.preventDefault(); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { setLook(key, cur - step); e.preventDefault(); }
+    });
+    document.getElementById(cfg.id).addEventListener('input', e => { if (e.target.value !== '') { drawLookKnob(key); draw(); } });
+  }
+  function setLook(key, deg) {
+    const cfg = lookCfg[key];
+    deg = cfg.full ? ((deg % 360) + 360) % 360 : Math.max(0, Math.min(90, deg));
+    document.getElementById(cfg.id).value = deg;
+    drawLookKnob(key); draw();
+  }
+  function drawLookKnob(key) {
+    const cfg = lookCfg[key], deg = num(cfg.id) || 0, a = deg * Math.PI / 180;
+    const n = document.getElementById('kn' + key), h = document.getElementById('kh' + key);
+    n.setAttribute('x2', cfg.cx + (LR - 14) * Math.cos(a)); n.setAttribute('y2', LY - (LR - 14) * Math.sin(a));
+    h.setAttribute('cx', cfg.cx + LR * Math.cos(a)); h.setAttribute('cy', LY - LR * Math.sin(a));
+  }
+  buildLookKnob('Az'); buildLookKnob('El');
+
+  // ---------- generic polar plot (used by the 4-mic mode) ----------
+  function polarPlot(canvas, dbAt, labelFor, markers) {
+    const g = canvas.getContext('2d'), w = canvas.width, cx = w / 2, cy = w / 2, maxR = w * 0.38, minDb = -40, maxDb = 0;
+    const toR = db => ((Math.max(minDb, Math.min(maxDb, db)) - minDb) / (maxDb - minDb)) * maxR;
+    g.clearRect(0, 0, w, w);
+    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+    g.strokeStyle = '#cbd5e1'; g.fillStyle = '#64748b'; g.font = '12px sans-serif'; g.lineWidth = 1;
+    for (let db = -30; db <= maxDb; db += 10) {
+      const r = toR(db);
+      g.beginPath(); g.arc(cx, cy, r, 0, 2 * Math.PI); g.stroke();
+      g.fillText(db + ' dB', cx + r * 0.707 + 4, cy - r * 0.707 - 4);
+    }
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let deg = 0; deg < 360; deg += 30) {
+      const a = -deg * Math.PI / 180;
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a)); g.stroke();
+      g.fillStyle = '#1e293b'; g.font = 'bold 13px sans-serif';
+      g.fillText(labelFor(deg), cx + (maxR + 24) * Math.cos(a), cy + (maxR + 24) * Math.sin(a));
+    }
+    markers(g, cx, cy);
+    g.beginPath();
+    for (let deg = 0; deg <= 360; deg++) {
+      const rad = deg * Math.PI / 180, r = toR(dbAt(rad)), a = -rad;
+      deg === 0 ? g.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a)) : g.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    g.closePath();
+    g.fillStyle = 'rgba(83, 104, 120, 0.25)'; g.fill();
+    g.strokeStyle = '#536878'; g.lineWidth = 2.5; g.stroke();
+  }
+
+  // ---------- small complex helpers ----------
+  const cx_ = (re, im = 0) => ({re, im});
+  const cmul = (a, b) => cx_(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+  const cdiv = (a, b) => { const m = b.re * b.re + b.im * b.im; return cx_((a.re * b.re + a.im * b.im) / m, (a.im * b.re - a.re * b.im) / m); };
+  const csub = (a, b) => cx_(a.re - b.re, a.im - b.im);
+  const cabs = a => Math.hypot(a.re, a.im);
+  const cexp = ph => cx_(Math.cos(ph), Math.sin(ph));
+  function csolve(A, b) {                       // Gaussian elimination, A is n×n complex
+    const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+    for (let k = 0; k < n; k++) {
+      let p = k; for (let r = k + 1; r < n; r++) if (cabs(M[r][k]) > cabs(M[p][k])) p = r;
+      [M[k], M[p]] = [M[p], M[k]];
+      for (let r = k + 1; r < n; r++) { const f = cdiv(M[r][k], M[k][k]); for (let cI = k; cI <= n; cI++) M[r][cI] = csub(M[r][cI], cmul(f, M[k][cI])); }
+    }
+    const x = Array(n);
+    for (let k = n - 1; k >= 0; k--) { let s2 = M[k][n]; for (let cI = k + 1; cI < n; cI++) s2 = csub(s2, cmul(M[k][cI], x[cI])); x[k] = cdiv(s2, M[k][k]); }
+    return x;
+  }
+
+  // ---------- 4-mic tetrahedron ----------
+  let tetraMethod = 'best';                     // 'best' = max directivity (WNG ≥ 0 dB), 'das' = delay-and-sum
+  function setMethod(m) {
+    tetraMethod = m;
+    document.getElementById('mBest').classList.toggle('active', m === 'best');
+    document.getElementById('mDas').classList.toggle('active', m === 'das');
+    draw();
+  }
+  function drawTetra(d, f, dc) {
+    const omega = 2 * Math.PI * f, k = omega / c, R = d / Math.sqrt(3), h = d * Math.sqrt(2 / 3);
+    const pos = [[R, 0, -h / 4], [-R / 2, d / 2, -h / 4], [-R / 2, -d / 2, -h / 4], [0, 0, 3 * h / 4]];
+    const az = (num('azNum') || 0) * Math.PI / 180, elv = (num('elNum') || 0) * Math.PI / 180;
+    const unit = (a, e) => [Math.cos(e) * Math.cos(a), Math.cos(e) * Math.sin(a), Math.sin(e)];
+    const dot = (p, u) => p[0] * u[0] + p[1] * u[1] + p[2] * u[2];
+    const u0 = unit(az, elv);
+    const steer = u => pos.map(p => cexp(k * dot(p, u)));          // a(u)
+    const a0 = steer(u0);
+    // complex weight per mic, response(u) = |Σ w_i · a_i(u)|
+    let w;
+    if (tetraMethod === 'das') {
+      w = a0.map(z => cx_(z.re, -z.im));                            // conj(a0): pure delays, equal gains
+    } else {
+      // max directivity against diffuse noise: w ∝ (Γ + εI)⁻¹ a0, with ε raised until white-noise gain ≥ 0 dB
+      const G = pos.map(p => pos.map(q => { const x = k * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); return x < 1e-9 ? 1 : Math.sin(x) / x; }));
+      const design = eps => {
+        const A = G.map((r, i) => r.map((v, j) => cx_(v + (i === j ? eps : 0))));
+        const x = csolve(A, a0);                                     // Γ⁻¹ a0
+        return x.map(z => cx_(z.re, -z.im));                         // weights = conj
+      };
+      const wng = ww => { let re = 0, im = 0; ww.forEach((z, i) => { const t = cmul(z, a0[i]); re += t.re; im += t.im; }); return (re * re + im * im) / ww.reduce((s2, z) => s2 + z.re * z.re + z.im * z.im, 0); };
+      let lo = 1e-6, hi = 1e3;
+      if (wng(design(lo)) >= 1) w = design(lo);
+      else { for (let it = 0; it < 40; it++) { const mid = Math.sqrt(lo * hi); if (wng(design(mid)) >= 1) hi = mid; else lo = mid; } w = design(hi); }
+    }
+    // normalize: mic0 = 1 (0 dB, +, no delay)
+    const w0 = w[0]; w = w.map(z => cdiv(z, w0));
+    let look = cx_(0); w.forEach((z, i) => { const t = cmul(z, a0[i]); look = cx_(look.re + t.re, look.im + t.im); });
+    const lookAbs = cabs(look);
+    const resp = u => {
+      const a = steer(u); let re = 0, im = 0;
+      w.forEach((z, i) => { const t = cmul(z, a[i]); re += t.re; im += t.im; });
+      return 20 * Math.log10(Math.max(Math.hypot(re, im) / lookAbs, 1e-4));
+    };
+    // convert each weight to gain, polarity and delay (exact at the current frequency)
+    const names = ['mic0', 'mic1', 'mic2', 'mic3'], xyz = ['(d/√3, 0, 0)', '(−d/2√3, d/2, 0)', '(−d/2√3, −d/2, 0)', '(0, 0, d√(2/3))'];
+    // delay-and-sum: true geometric delays, all +; best: weight phase as a delay (exact at this frequency)
+    const tauDas = pos.map(p => (dot(p, u0) - dot(pos[0], u0)) / c);
+    const rows = w.map((z, i) => {
+      let ph = Math.atan2(z.im, z.re), sign = '+', t;
+      if (tetraMethod === 'das') t = tauDas[i];
+      else { if (Math.abs(ph) > Math.PI / 2) { sign = '−'; ph -= Math.sign(ph) * Math.PI; } t = -ph / omega; }
+      if (Math.abs(t) < 1e-9) t = 0;
+      const th = Math.abs(t) <= dc * 1.0001 ? (Math.acos(Math.max(-1, Math.min(1, t / dc))) * 180 / Math.PI).toFixed(0) + '°' : '—';
+      return `<tr><td>${names[i]} <span class="xyz">${xyz[i]}</span></td><td>${(20 * Math.log10(cabs(z))).toFixed(1)} dB</td><td style="text-align:center">${sign}</td><td>${th}</td><td>${(t * 1e6).toFixed(0)}</td></tr>`;
+    });
+    document.getElementById('wBody').innerHTML = rows.join('');
+    const wngDb = 10 * Math.log10(lookAbs * lookAbs / w.reduce((s2, z) => s2 + z.re * z.re + z.im * z.im, 0));
+    document.getElementById('snrOut').textContent = `SNR gain vs. a single microphone: ${wngDb.toFixed(1)} dB`;
+    const azDeg = Math.round(num('azNum') || 0), elDeg = Math.round(num('elNum') || 0);
+    document.getElementById('capAz').textContent = `Azimuth at ${elDeg}° Elevation`;
+    document.getElementById('capEl').textContent = `Elevation at ${azDeg}° Azimuth`;
+    // azimuth plot: sweep azimuth at the look elevation
+    polarPlot(cvs, a => resp(unit(a, elv)), deg => deg + '°', (g, cx, cy) => {
+      g.strokeStyle = '#000'; g.fillStyle = '#000'; g.lineWidth = 2; g.font = 'bold 11px sans-serif';
+      [[0, 'mic0'], [120, 'mic1'], [240, 'mic2']].forEach(([a, t]) => {
+        const r = a * Math.PI / 180, x = cx + 16 * Math.cos(r), y = cy - 16 * Math.sin(r);
+        g.beginPath(); g.arc(x, y, 4.5, 0, 2 * Math.PI); g.stroke(); g.fillText(t, cx + 34 * Math.cos(r), cy - 34 * Math.sin(r));
+      });
+      g.beginPath(); g.arc(cx, cy, 4.5, 0, 2 * Math.PI); g.fill();
+    });
+    // elevation plot: right = horizon toward the look azimuth, up = +90°, left = horizon behind, down = −90°
+    const elLabel = t => t === 0 ? '0°' : t === 180 ? 'back 0°' : t <= 90 ? `+${t}°` : t < 180 ? `+${180 - t}°` : t < 270 ? `−${t - 180}°` : t === 270 ? '−90°' : `−${360 - t}°`;
+    polarPlot(document.getElementById('polarEl'), t => resp([Math.cos(t) * Math.cos(az), Math.cos(t) * Math.sin(az), Math.sin(t)]), elLabel, (g, cx, cy) => {
+      g.strokeStyle = '#000'; g.fillStyle = '#000'; g.lineWidth = 2; g.font = 'bold 11px sans-serif';
+      g.beginPath(); g.arc(cx, cy + 8, 4.5, 0, 2 * Math.PI); g.stroke();
+      g.beginPath(); g.arc(cx, cy - 12, 4.5, 0, 2 * Math.PI); g.fill(); g.fillText('mic3', cx + 22, cy - 12);
+    });
+  }
+
   // ---------- plot ----------
   function draw() {
     const dl = num('dlNum') || 0.15;                  // d / lambda
@@ -218,6 +440,8 @@
     const dc = d / c;                                 // travel time across the array [s]
     document.getElementById('fOut').textContent = `f = ${f >= 1000 ? (f / 1000).toFixed(2) + ' kHz' : f.toFixed(0) + ' Hz'}\nλ = ${(100 * d / dl).toFixed(1)} cm`;
     document.getElementById('dcOut').textContent = `\nd/c = ${(dc * 1e6).toFixed(0)} µs`;
+    document.getElementById('capAz').textContent = '';
+    if (mode === 4) { drawTetra(d, f, dc); return; }
 
     // mic0 is the fixed reference: gain 1, delay 0, + polarity
     const mics = [{g: 1, t: 0}];
