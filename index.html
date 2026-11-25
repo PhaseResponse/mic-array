@@ -95,7 +95,7 @@
         <div class="look-col"><span>Elevation</span><svg class="knob-c" id="kEl" viewBox="0 0 160 140" tabindex="0" aria-label="look elevation dial"></svg><span><input type="number" id="elNum" min="0" max="90" step="1" value="20">&deg;</span></div>
       </div>
       <div class="mode-bar method-bar"><button id="mBest" class="mode-btn active" onclick="setMethod('best')">MVDR</button><button id="mDas" class="mode-btn" onclick="setMethod('das')">Delay and Sum</button></div>
-      <div class="tbox"><table class="wtab"><caption>Values computed from the angles set in the Azimuth and Elevation dials</caption><thead><tr><th>Mic (x, y, z)</th><th>Gain</th><th>Polarity</th><th>&theta;</th><th>&tau; (&mu;s)</th></tr></thead><tbody id="wBody"></tbody></table><div class="readout" id="snrOut" style="margin-top:8px"></div></div>
+      <div class="tbox"><table class="wtab"><caption id="wCap"></caption><thead><tr><th>Mic (x, y, z)</th><th>Gain</th><th>Polarity</th><th>&theta;</th><th>&tau; (&mu;s)</th></tr></thead><tbody id="wBody"></tbody></table><div class="readout" id="snrOut" style="margin-top:8px"></div></div>
     </div>
     <div class="card" id="card1">
       <h3 id="lbl1">mic1 (+d/2)</h3>
@@ -409,6 +409,9 @@
       return `<tr><td>${names[i]} <span class="xyz">${xyz[i]}</span></td><td>${(20 * Math.log10(cabs(z))).toFixed(1)} dB</td><td style="text-align:center">${sign}</td><td>${th}</td><td>${(t * 1e6).toFixed(0)}</td></tr>`;
     });
     document.getElementById('wBody').innerHTML = rows.join('');
+    document.getElementById('wCap').textContent = 'Azimuth and Elevation from dials. ' + (tetraMethod === 'das'
+      ? 'All mics at equal gain, delayed for look direction.'
+      : 'Narrowest beam that keeps the SNR at least as good as a single mic.');
     const wngDb = 10 * Math.log10(lookAbs * lookAbs / w.reduce((s2, z) => s2 + z.re * z.re + z.im * z.im, 0));
     document.getElementById('snrOut').textContent = `SNR gain vs. a single microphone: ${wngDb.toFixed(1)} dB`;
     const azDeg = Math.round(num('azNum') || 0), elDeg = Math.round(num('elNum') || 0);
